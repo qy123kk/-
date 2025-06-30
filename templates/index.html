@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能问答助手</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- MathJax Configuration -->
+    <script type="text/javascript">
+    window.MathJax = {
+        tex: {
+            inlineMath: [['\\(', '\\)']],
+            displayMath: [['\\[', '\\]']],
+            processEscapes: true
+        },
+        options: {
+            enableMenu: false
+        }
+    };
+    </script>
+    <!-- Load MathJax -->
+    <script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 左侧历史记录和功能区 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <button id="new-chat-btn"> + 新建对话</button>
+            </div>
+            <div class="history-list" id="history-list">
+                <!-- 历史对话将在这里动态加载 -->
+            </div>
+        </div>
+
+        <!-- 右侧对话界面 -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <h2 id="chat-title">新对话</h2>
+                <div class="chat-controls">
+                    <button id="refresh-context-btn" title="刷新对话上下文" style="display: none;">
+                        <i class="fas fa-sync-alt"></i> 刷新记忆
+                    </button>
+                    <button id="memory-status-btn" title="查看记忆状态" style="display: none;">
+                        <i class="fas fa-brain"></i> 记忆状态
+                    </button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                 <!-- 欢迎信息或对话内容 -->
+                <div class="message welcome">
+                    <p>欢迎使用智能问答助手！<br>请从左侧选择一个对话，或点击"新建对话"开始。</p>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <textarea id="user-input" placeholder="输入您的问题..." rows="1"></textarea>
+                <div class="input-buttons">
+                    <button id="voice-call-btn" title="语音通话模式">
+                        <i class="fas fa-phone"></i> 语音通话
+                    </button>
+                    <button id="voice-input-btn" title="语音输入">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button id="send-btn">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建对话/智能体 弹窗 -->
+    <div id="new-chat-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div class="modal-tabs">
+                <button class="tab-btn active" data-tab="select-agent">选择智能体</button>
+                <button class="tab-btn" data-tab="create-agent">创建新智能体</button>
+            </div>
+            
+            <!-- 选择已有智能体选项卡 -->
+            <div id="select-agent-tab" class="tab-content active">
+                <h2>选择智能体开始对话</h2>
+                <div class="agent-list" id="agent-selection-list">
+                    <!-- 智能体列表将在这里动态加载 -->
+                    <div class="agent-list-loading">正在加载智能体列表...</div>
+                </div>
+            </div>
+            
+            <!-- 创建新智能体选项卡 -->
+            <div id="create-agent-tab" class="tab-content">
+                <h2>创建新智能体</h2>
+                <form id="new-agent-form">
+                    <label for="agent-name">智能体名称:</label>
+                    <input type="text" id="agent-name" name="agent-name" required>
+
+                    <label for="agent-type">智能体类型:</label>
+                    <select id="agent-type" name="agent-type">
+                        <option value="DEFAULT">通用智能体</option>
+                        <option value="CHINESE_TEACHER">语文老师</option>
+                        <option value="MATH_TEACHER">数学老师</option>
+                    </select>
+
+                    <label for="agent-role">智能体角色 (System Prompt):</label>
+                    <textarea id="agent-role" name="agent-role" rows="4" placeholder="例如：你是一个友好的AI助手。"></textarea>
+
+                    <label for="knowledge-files">上传知识库 (可选, 支持.pdf, .docx, .txt):</label>
+                    <input type="file" id="knowledge-files" name="knowledge-files" multiple accept=".pdf,.docx,.txt">
+
+                    <button type="submit">创建并开始对话</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 语音输入弹窗 -->
+    <div id="voice-input-modal" class="modal">
+        <div class="modal-content voice-modal">
+            <span class="close-voice-btn close-btn">&times;</span>
+            <h2>语音输入</h2>
+            <div class="voice-input-container">
+                <div class="recording-indicator" id="recording-indicator">
+                    <div class="recording-pulse"></div>
+                    <div class="recording-text">正在录音...</div>
+                </div>
+                <div class="voice-buttons">
+                    <button id="start-recording-btn" class="voice-btn">
+                        <i class="fas fa-microphone"></i> 开始录音
+                    </button>
+                    <button id="stop-recording-btn" class="voice-btn" disabled>
+                        <i class="fas fa-stop"></i> 停止录音
+                    </button>
+                </div>
+                <div class="voice-result">
+                    <p>识别结果:</p>
+                    <div id="voice-text" class="voice-text-result"></div>
+                    <button id="use-voice-text-btn" class="voice-btn" disabled>
+                        使用此文本
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html> 
